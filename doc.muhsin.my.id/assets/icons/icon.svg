@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#09090b"/>
+  <rect x="32" y="32" width="448" height="448" fill="#18181b" stroke="#27272a" stroke-width="8"/>
+  <rect x="96" y="80" width="320" height="352" fill="#2563eb" stroke="#3b82f6" stroke-width="4"/>
+  <rect x="140" y="128" width="120" height="18" fill="#ffffff"/>
+  <rect x="140" y="170" width="232" height="12" fill="#93c5fd"/>
+  <rect x="140" y="202" width="200" height="12" fill="#93c5fd"/>
+  <rect x="140" y="234" width="232" height="12" fill="#93c5fd"/>
+  <rect x="140" y="266" width="160" height="12" fill="#93c5fd"/>
+  <rect x="140" y="320" width="96" height="64" fill="#09090b" stroke="#60a5fa" stroke-width="4"/>
+  <text x="188" y="364" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="34" text-anchor="middle">DM</text>
+</svg>

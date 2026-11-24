@@ -1,0 +1,38 @@
+# ----------------------------------------------------
+# Root Git Ignore for doc.muhsin.my.id Project
+# ----------------------------------------------------
+
+# Environment Secrets (SANGAT PENTING: Jangan bocorkan ke GitHub)
+.env
+.env.*
+!.env.example
+*.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Node.js
+node_modules/
+**/node_modules/
+npm-debug.log*
+
+# User Uploads
+uploads/avatars/*
+**/uploads/avatars/*
+!**/uploads/avatars/.gitkeep
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.suo
+*.sln
+*.swp
+
+# Logs & Temporary Files
+*.log
+error_log

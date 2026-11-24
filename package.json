@@ -1,0 +1,9 @@
+{
+  "name": "doc-manager-root",
+  "version": "1.0.0",
+  "description": "DocManager root proxy scripts",
+  "scripts": {
+    "build": "npm --prefix doc.muhsin.my.id run build",
+    "watch": "npm --prefix doc.muhsin.my.id run watch"
+  }
+}
