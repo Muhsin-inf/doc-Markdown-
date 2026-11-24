@@ -1,5 +1,18 @@
 <?php
+// config/auth.php
+
+// Pastikan konfigurasi session cookie aman dan mendukung redirect OAuth
 if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+    
+    // Konfigurasi cookie session agar tidak hilang saat redirect balik dari Google
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'secure'   => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
 
@@ -38,12 +51,11 @@ function clearRememberCookie(): void {
 }
 
 function createRememberToken(PDO $pdo, int $userId): void {
-    // Hapus token kedaluwarsa milik user
     $cleanup = $pdo->prepare("DELETE FROM user_remember_tokens WHERE user_id = ? AND expires_at <= NOW()");
     $cleanup->execute([$userId]);
 
-    $selector = bin2hex(random_bytes(12)); // 24 hex chars
-    $validator = bin2hex(random_bytes(32)); // 64 hex chars
+    $selector = bin2hex(random_bytes(12));
+    $validator = bin2hex(random_bytes(32));
     $validatorHash = hash('sha256', $validator);
 
     $expiresTimestamp = time() + (REMEMBER_LIFETIME_DAYS * 86400);
@@ -96,7 +108,6 @@ function checkRememberMeLogin(PDO $pdo): bool {
 
     $calculatedHash = hash('sha256', $validator);
     if (!hash_equals($tokenRow['validator_hash'], $calculatedHash)) {
-        // Jika validator tidak cocok, hapus token tersebut demi keamanan
         $del = $pdo->prepare("DELETE FROM user_remember_tokens WHERE id = ?");
         $del->execute([$tokenRow['id']]);
         clearRememberCookie();
@@ -107,7 +118,6 @@ function checkRememberMeLogin(PDO $pdo): bool {
     $_SESSION['user_id'] = (int) $tokenRow['user_id'];
     $_SESSION['user_name'] = $tokenRow['name'];
 
-    // Rotasi token agar lebih aman
     $delOld = $pdo->prepare("DELETE FROM user_remember_tokens WHERE id = ?");
     $delOld->execute([$tokenRow['id']]);
     createRememberToken($pdo, (int) $tokenRow['user_id']);
@@ -150,7 +160,6 @@ function getCurrentUser(PDO $pdo): ?array {
             return $user;
         }
     } catch (Exception $e) {
-        // Fallback jika kolom avatar belum ditambahkan di database
         $stmt = $pdo->prepare("SELECT id, name, email, NULL AS avatar, oauth_provider, oauth_id, role, created_at, (password IS NOT NULL AND password != '') AS has_password FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([(int)$_SESSION['user_id']]);
         $user = $stmt->fetch();
