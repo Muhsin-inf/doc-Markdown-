@@ -1,6 +1,6 @@
 <?php
 // config/env.php
-// Lightweight, zero-dependency .env loader
+// Lightweight, zero-dependency .env loader compatible with aaPanel & restricted hosting
 
 if (!function_exists('loadEnv')) {
     function loadEnv(string $envPath): void {
@@ -42,9 +42,14 @@ if (!function_exists('loadEnv')) {
                 $val = null;
             }
 
-            putenv("{$key}={$val}");
+            // Simpan ke $_ENV dan $_SERVER (aman dari disable_functions aaPanel)
             $_ENV[$key] = $val;
             $_SERVER[$key] = $val;
+
+            // Panggil putenv hanya jika diizinkan oleh server
+            if (function_exists('putenv')) {
+                @putenv("{$key}={$val}");
+            }
         }
     }
 }
@@ -57,9 +62,11 @@ if (!function_exists('env')) {
         if (array_key_exists($key, $_SERVER)) {
             return $_SERVER[$key];
         }
-        $val = getenv($key);
-        if ($val !== false) {
-            return $val;
+        if (function_exists('getenv')) {
+            $val = @getenv($key);
+            if ($val !== false && $val !== null) {
+                return $val;
+            }
         }
         return $default;
     }
