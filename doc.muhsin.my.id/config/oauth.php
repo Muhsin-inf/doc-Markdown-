@@ -4,6 +4,11 @@ require_once __DIR__ . '/env.php';
 define('GOOGLE_CLIENT_ID', env('GOOGLE_CLIENT_ID', ''));
 define('GOOGLE_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET', ''));
 
+function isGoogleConfigured(): bool {
+    return defined('GOOGLE_CLIENT_ID') && !empty(GOOGLE_CLIENT_ID) &&
+           defined('GOOGLE_CLIENT_SECRET') && !empty(GOOGLE_CLIENT_SECRET);
+}
+
 // Dapatkan redirect URI yang sesuai: jika tidak diisi di .env, deteksi domain yang sedang aktif saat ini
 function getGoogleRedirectUri(): string {
     $configured = env('GOOGLE_REDIRECT_URI');
@@ -20,6 +25,10 @@ function getGoogleRedirectUri(): string {
 define('GOOGLE_REDIRECT_URI', getGoogleRedirectUri());
 
 function getGoogleAuthUrl(): string {
+    if (!isGoogleConfigured()) {
+        return '#';
+    }
+
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -27,15 +36,17 @@ function getGoogleAuthUrl(): string {
     $state = bin2hex(random_bytes(16));
     $_SESSION['oauth_state'] = $state;
 
-    // Simpan juga di cookie cadangan sebagai proteksi ganda jika session PHP terputus karena beda subdomain / proxy
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
-    setcookie('oauth_state_backup', hash('sha256', $state), [
-        'expires'  => time() + 600, // berlaku 10 menit
-        'path'     => '/',
-        'secure'   => $isHttps,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+    // Simpan juga di cookie cadangan jika header HTTP belum terkirim
+    if (!headers_sent()) {
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+        setcookie('oauth_state_backup', hash('sha256', $state), [
+            'expires'  => time() + 600, // berlaku 10 menit
+            'path'     => '/',
+            'secure'   => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    }
 
     $params = http_build_query([
         'client_id'     => GOOGLE_CLIENT_ID,

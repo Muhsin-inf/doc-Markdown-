@@ -13,6 +13,16 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false
     ]);
+
+    // Auto-migration: Otomatis tambahkan kolom avatar ke tabel users jika belum ada
+    try {
+        $checkCol = $pdo->query("SHOW COLUMNS FROM users LIKE 'avatar'")->fetch();
+        if (!$checkCol) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL AFTER email");
+        }
+    } catch (Exception $ex) {
+        // Abaikan jika pengguna database tidak memiliki permission ALTER
+    }
 } catch (PDOException $e) {
     die("Koneksi database gagal: " . $e->getMessage());
 }
