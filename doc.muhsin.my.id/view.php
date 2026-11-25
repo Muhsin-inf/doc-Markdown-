@@ -133,6 +133,19 @@ $activeNav = '';
         .dark .markdown-body th, .dark .markdown-body td {
             border-color: #27272a;
         }
+        /* Fix: teks panjang tanpa spasi (URL/path) tidak merusak layout mobile */
+        .markdown-body,
+        .markdown-body p,
+        .markdown-body li,
+        .markdown-body h1, .markdown-body h2, .markdown-body h3,
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        /* Khusus inline code dan link tetap bisa break */
+        .markdown-body a {
+            word-break: break-all;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 dark:bg-zinc-950 dark:text-zinc-100 flex flex-col">
@@ -174,6 +187,40 @@ $activeNav = '';
                         <span>Bagikan</span>
                     </button>
                 <?php endif; ?>
+
+                <!-- Tombol Download (tersedia untuk semua yang punya akses) -->
+                <div class="relative" id="downloadDropdown">
+                    <button type="button" onclick="toggleDownloadMenu()" class="inline-flex items-center gap-1.5 border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        <span>Unduh</span>
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+                    <!-- Dropdown menu -->
+                    <div id="downloadMenu" class="hidden absolute right-0 top-full z-30 mt-1 w-44 border border-slate-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                        <a href="download.php?id=<?= (int)$doc['id'] ?>&format=md<?= $token ? '&token='.urlencode($token) : '' ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                            Unduh sebagai .md
+                        </a>
+                        <a href="download.php?id=<?= (int)$doc['id'] ?>&format=txt<?= $token ? '&token='.urlencode($token) : '' ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                            Unduh sebagai .txt
+                        </a>
+                        <a href="download.php?id=<?= (int)$doc['id'] ?>&format=html<?= $token ? '&token='.urlencode($token) : '' ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
+                            </svg>
+                            Unduh sebagai .html
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -380,6 +427,22 @@ $activeNav = '';
     <?php endif; ?>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script>hljs.highlightAll();</script>
+    <script>
+        hljs.highlightAll();
+
+        // Toggle dropdown unduh
+        function toggleDownloadMenu() {
+            const menu = document.getElementById('downloadMenu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+        // Tutup dropdown jika klik di luar
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('downloadDropdown');
+            if (dd && !dd.contains(e.target)) {
+                const menu = document.getElementById('downloadMenu');
+                if (menu) menu.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>
