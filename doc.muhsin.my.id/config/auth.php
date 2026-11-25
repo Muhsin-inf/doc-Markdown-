@@ -1,23 +1,43 @@
 <?php
 // config/auth.php
 
-// Pastikan konfigurasi session cookie aman dan mendukung redirect OAuth
+// ─── Persistent Session Configuration ─────────────────────────────────────────
+// Seperti Google Drive: session tidak habis selama browser hidup,
+// dan remember-me token otomatis di-refresh setiap kunjungan (rolling token).
+// ──────────────────────────────────────────────────────────────────────────────
+
+const REMEMBER_COOKIE_NAME   = 'docmgr_remember';
+const REMEMBER_LIFETIME_DAYS = 365;          // token aktif 1 tahun jika tidak aktif
+const SESSION_LIFETIME_SECS  = 86400 * 30;  // session PHP hidup 30 hari di server
+
 if (session_status() === PHP_SESSION_NONE) {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
-    
-    // Konfigurasi cookie session agar tidak hilang saat redirect balik dari Google
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+
+    // Perpanjang gc maxlifetime agar session di server tidak dihapus prematur
+    @ini_set('session.gc_maxlifetime', (string) SESSION_LIFETIME_SECS);
+
+    // Cookie session hidup 30 hari (bukan 0 = sampai browser tutup)
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => SESSION_LIFETIME_SECS,
         'path'     => '/',
         'secure'   => $isHttps,
         'httponly' => true,
-        'samesite' => 'Lax'
+        'samesite' => 'Lax',
     ]);
     session_start();
-}
 
-const REMEMBER_COOKIE_NAME = 'docmgr_remember';
-const REMEMBER_LIFETIME_DAYS = 30;
+    // Perpanjang cookie setiap request agar tidak habis selama aktif (rolling)
+    if (!empty($_SESSION['user_id'])) {
+        setcookie(session_name(), session_id(), [
+            'expires'  => time() + SESSION_LIFETIME_SECS,
+            'path'     => '/',
+            'secure'   => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+}
 
 function isHttpsRequest(): bool {
     if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
@@ -50,16 +70,21 @@ function clearRememberCookie(): void {
     unset($_COOKIE[REMEMBER_COOKIE_NAME]);
 }
 
+/**
+ * Buat remember-me token baru (rolling: hapus lama, buat baru).
+ * Dipanggil saat login DAN saat token lama digunakan (rolling refresh).
+ */
 function createRememberToken(PDO $pdo, int $userId): void {
+    // Hapus token lama milik user ini yang sudah expired
     $cleanup = $pdo->prepare("DELETE FROM user_remember_tokens WHERE user_id = ? AND expires_at <= NOW()");
     $cleanup->execute([$userId]);
 
-    $selector = bin2hex(random_bytes(12));
-    $validator = bin2hex(random_bytes(32));
+    $selector      = bin2hex(random_bytes(12));
+    $validator     = bin2hex(random_bytes(32));
     $validatorHash = hash('sha256', $validator);
 
     $expiresTimestamp = time() + (REMEMBER_LIFETIME_DAYS * 86400);
-    $expiresAtSql = date('Y-m-d H:i:s', $expiresTimestamp);
+    $expiresAtSql     = date('Y-m-d H:i:s', $expiresTimestamp);
 
     $stmt = $pdo->prepare("
         INSERT INTO user_remember_tokens (user_id, selector, validator_hash, expires_at)
@@ -70,6 +95,10 @@ function createRememberToken(PDO $pdo, int $userId): void {
     setRememberCookie($selector . ':' . $validator, $expiresTimestamp);
 }
 
+/**
+ * Periksa cookie remember-me → login otomatis.
+ * Setelah berhasil, langsung buat token baru (rolling).
+ */
 function checkRememberMeLogin(PDO $pdo): bool {
     if (!empty($_SESSION['user_id'])) {
         return true;
@@ -108,16 +137,19 @@ function checkRememberMeLogin(PDO $pdo): bool {
 
     $calculatedHash = hash('sha256', $validator);
     if (!hash_equals($tokenRow['validator_hash'], $calculatedHash)) {
-        $del = $pdo->prepare("DELETE FROM user_remember_tokens WHERE id = ?");
-        $del->execute([$tokenRow['id']]);
+        // Token tidak cocok — hapus semua token user ini (kemungkinan token dicuri)
+        $del = $pdo->prepare("DELETE FROM user_remember_tokens WHERE user_id = ?");
+        $del->execute([$tokenRow['user_id']]);
         clearRememberCookie();
         return false;
     }
 
+    // Token valid → regenerate session
     session_regenerate_id(true);
-    $_SESSION['user_id'] = (int) $tokenRow['user_id'];
+    $_SESSION['user_id']   = (int) $tokenRow['user_id'];
     $_SESSION['user_name'] = $tokenRow['name'];
 
+    // Hapus token lama & buat yang baru (rolling token — tidak akan expired selama aktif)
     $delOld = $pdo->prepare("DELETE FROM user_remember_tokens WHERE id = ?");
     $delOld->execute([$tokenRow['id']]);
     createRememberToken($pdo, (int) $tokenRow['user_id']);
@@ -125,6 +157,10 @@ function checkRememberMeLogin(PDO $pdo): bool {
     return true;
 }
 
+/**
+ * Wajibkan login — cek session dulu, lalu remember-me cookie.
+ * Selalu panggil dengan $pdo agar auto-login dari cookie bekerja.
+ */
 function requireLogin(?PDO $pdo = null): void {
     if (!empty($_SESSION['user_id'])) {
         return;

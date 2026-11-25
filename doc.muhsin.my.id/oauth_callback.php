@@ -141,9 +141,12 @@ if ($user) {
 }
 
 session_regenerate_id(true);
-$_SESSION['user_id'] = $userId;
+$_SESSION['user_id']   = $userId;
 $_SESSION['user_name'] = $userName;
 $_SESSION['user_avatar'] = $userAvatar;
+
+// Buat remember-me token otomatis setelah OAuth login (seperti Google Drive)
+createRememberToken($pdo, $userId);
 
 header("Location: index.php");
 exit;

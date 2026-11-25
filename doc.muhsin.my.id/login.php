@@ -18,7 +18,6 @@ $emailInput = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailInput = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $rememberMe = !empty($_POST['remember_me']);
 
     if ($emailInput === '' || $password === '') {
         $error = "Email dan password wajib diisi.";
@@ -29,15 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user && !empty($user['password']) && password_verify($password, $user['password'])) {
             session_regenerate_id(true);
-            $_SESSION['user_id'] = (int) $user['id'];
-            $_SESSION['user_name'] = $user['name'];
+            $_SESSION['user_id']     = (int) $user['id'];
+            $_SESSION['user_name']   = $user['name'];
             $_SESSION['user_avatar'] = $user['avatar'] ?? null;
 
-            if ($rememberMe) {
-                createRememberToken($pdo, (int) $user['id']);
-            } else {
-                clearRememberCookie();
-            }
+            // Selalu buat remember-me token (seperti Google Drive — tidak perlu centang)
+            createRememberToken($pdo, (int) $user['id']);
 
             header("Location: index.php");
             exit;
@@ -100,13 +96,6 @@ $pageTitle = 'Masuk ke Akun';
             <div>
                 <label for="password" class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">Password</label>
                 <input type="password" id="password" name="password" required placeholder="••••••••" class="w-full border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm text-slate-900 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-            </div>
-
-            <div class="flex items-center">
-                <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-zinc-400 cursor-pointer">
-                    <input type="checkbox" name="remember_me" value="1" class="h-3.5 w-3.5 border-slate-300 dark:border-zinc-700 text-blue-600">
-                    <span>Ingat saya selama <?= REMEMBER_LIFETIME_DAYS ?> hari</span>
-                </label>
             </div>
 
             <button type="submit" class="w-full border border-blue-600 bg-blue-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-blue-700 dark:border-blue-500 dark:bg-blue-600 dark:hover:bg-blue-500">
