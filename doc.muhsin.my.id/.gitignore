@@ -47,4 +47,4 @@ tmp/
 temp/
 
 # Server / Local Configs
-.user.ini
+# .user.ini — TIDAK di-ignore agar ter-deploy ke server via git pull
