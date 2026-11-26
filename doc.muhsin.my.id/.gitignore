@@ -17,6 +17,8 @@ pnpm-debug.log*
 # User Uploads (Kecualikan .gitkeep agar direktori tetap ada di Git)
 uploads/avatars/*
 !uploads/avatars/.gitkeep
+uploads/images/**/*
+!uploads/images/.gitkeep
 
 # Operating System Files
 .DS_Store

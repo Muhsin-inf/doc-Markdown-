@@ -200,7 +200,7 @@ $activeNav = '';
                         </svg>
                     </button>
                     <!-- Dropdown menu -->
-                    <div id="downloadMenu" class="hidden absolute right-0 top-full z-30 mt-1 w-44 border border-slate-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                    <div id="downloadMenu" class="hidden absolute right-0 top-full z-30 mt-1 w-48 border border-slate-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                         <a href="download.php?id=<?= (int)$doc['id'] ?>&format=md<?= $token ? '&token='.urlencode($token) : '' ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800">
                             <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -217,7 +217,14 @@ $activeNav = '';
                             <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
                             </svg>
-                            Unduh sebagai .html
+                            Unduh .html <span class="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">gambar embed</span>
+                        </a>
+                        <div class="border-t border-slate-100 dark:border-zinc-800"></div>
+                        <a href="download.php?id=<?= (int)$doc['id'] ?>&format=zip<?= $token ? '&token='.urlencode($token) : '' ?>" class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                            <svg class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.75 7.5h16.5M5.625 7.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm14.25 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                            </svg>
+                            Unduh .zip <span class="ml-auto text-[10px] text-blue-600 dark:text-blue-400 font-semibold">md + gambar</span>
                         </a>
                     </div>
                 </div>

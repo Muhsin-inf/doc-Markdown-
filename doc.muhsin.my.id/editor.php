@@ -128,6 +128,18 @@ $activeNav = 'editor';
             <button type="button" onclick="insertCodeBlock()" title="Blok Kode" class="border border-slate-300 bg-white px-2 py-1 text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">💻 Blok Kode</button>
             <button type="button" onclick="insertTable()" title="Tabel" class="border border-slate-300 bg-white px-2 py-1 text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">📊 Tabel</button>
 
+            <span class="mx-1 h-4 w-px bg-slate-200 dark:bg-zinc-700"></span>
+
+            <!-- Tombol Upload Gambar (upload ke server, sisipkan URL di Markdown) -->
+            <label id="imgUploadLabel" title="Upload Gambar ke Server (maks 5MB: JPG/PNG/GIF/WebP)" class="cursor-pointer inline-flex items-center gap-1 border border-slate-300 bg-white px-2 py-1 text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                <span>Gambar</span>
+                <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" class="hidden">
+            </label>
+            <span id="imgUploadStatus" class="hidden text-[11px] font-medium text-blue-600 dark:text-blue-400">⏳ Mengupload...</span>
+
             <!-- Mobile View Switcher (Editor / Preview) -->
             <div class="ml-auto flex sm:hidden border border-slate-300 dark:border-zinc-700">
                 <button type="button" id="tabEditorBtn" onclick="switchMobileTab('editor')" class="bg-blue-600 text-white px-2 py-0.5 text-[11px] font-semibold">Tulis</button>
@@ -228,6 +240,115 @@ $activeNav = 'editor';
                     updatePreview();
                 };
                 reader.readAsText(file);
+            });
+        }
+
+        // ─── Upload Gambar ke Server ──────────────────────────────────────────────
+        // Sisipkan markdown ![alt](url) ke posisi kursor setelah upload selesai
+
+        const imgFileInput   = document.getElementById('imgFileInput');
+        const imgUploadStatus = document.getElementById('imgUploadStatus');
+
+        /**
+         * Upload file gambar ke upload_image.php, lalu sisipkan ![alt](url) ke editor.
+         */
+        async function uploadImageFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                alert('File harus berupa gambar (JPG, PNG, GIF, WebP, SVG).');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Ukuran gambar maksimal 5 MB.');
+                return;
+            }
+
+            imgUploadStatus.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const resp = await fetch('upload_image.php', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (data.success) {
+                    // Sisipkan syntax Markdown gambar di posisi kursor
+                    const altText = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+                    const mdImg   = `![${altText}](${data.url})`;
+                    insertAtCursor(mdImg);
+                    updatePreview();
+                } else {
+                    alert('Upload gagal: ' + (data.error || 'Error tidak diketahui.'));
+                }
+            } catch (err) {
+                alert('Gagal terhubung ke server saat upload gambar.');
+            } finally {
+                imgUploadStatus.classList.add('hidden');
+                if (imgFileInput) imgFileInput.value = '';
+            }
+        }
+
+        /**
+         * Sisipkan teks di posisi kursor textarea.
+         */
+        function insertAtCursor(text) {
+            const start = markdownInput.selectionStart;
+            const end   = markdownInput.selectionEnd;
+            const val   = markdownInput.value;
+            // Pastikan ada baris baru di sekitar sintaks gambar jika bukan di awal baris
+            const before = val.substring(0, start);
+            const after  = val.substring(end);
+            const prefix = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+            const suffix = (after.length > 0 && !after.startsWith('\n')) ? '\n' : '';
+            const insert = prefix + text + suffix;
+            markdownInput.value = before + insert + after;
+            const newPos = start + insert.length;
+            markdownInput.setSelectionRange(newPos, newPos);
+            markdownInput.focus();
+        }
+
+        // Handler tombol upload gambar
+        if (imgFileInput) {
+            imgFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) uploadImageFile(file);
+            });
+        }
+
+        // ─── Paste gambar dari clipboard (Ctrl+V) ────────────────────────────────
+        markdownInput.addEventListener('paste', function(e) {
+            const items = (e.clipboardData || window.clipboardData)?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    uploadImageFile(item.getAsFile());
+                    return;
+                }
+            }
+        });
+
+        // ─── Drag & Drop gambar ke editor ────────────────────────────────────────
+        const editorContainer = document.getElementById('editorContainer');
+        if (editorContainer) {
+            editorContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                editorContainer.classList.add('ring-2', 'ring-blue-500');
+            });
+            editorContainer.addEventListener('dragleave', function() {
+                editorContainer.classList.remove('ring-2', 'ring-blue-500');
+            });
+            editorContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                editorContainer.classList.remove('ring-2', 'ring-blue-500');
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    for (const f of files) {
+                        if (f.type.startsWith('image/')) {
+                            uploadImageFile(f);
+                        }
+                    }
+                }
             });
         }
 
